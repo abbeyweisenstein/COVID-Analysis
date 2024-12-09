@@ -4,8 +4,6 @@ import os
 import matplotlib.pyplot as plt
 
 DB_NAME = "ClimateAndCovid.db"
-pdDB = "PopulationDensity.db"
-povertyDB = "Poverty.db"
 
 apiKey = '93b284ef6a8d2b4b3287dd91193707b35548454d'
 
@@ -105,7 +103,7 @@ def cleanPovertyData(census_data):
 
 
 def setupPopulationDatabase():
-    conn = sqlite3.connect(pdDB)
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS CountyData (
@@ -120,7 +118,7 @@ def setupPopulationDatabase():
     conn.close()
 
 def setupPovertyDatabase():
-    conn = sqlite3.connect(povertyDB)
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS PovertyData (
@@ -135,7 +133,7 @@ def setupPovertyDatabase():
     conn.close()
 
 def insertPopulationDataBatch(data, batch_size=25):
-    conn = sqlite3.connect(pdDB)
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM CountyData")
     current_count = cursor.fetchone()[0]
@@ -153,7 +151,7 @@ def insertPopulationDataBatch(data, batch_size=25):
     print(f"Inserted {end_index - start_index} records into the population density database.")
 
 def insertPovertyDataInBatch(data, batch_size=25):
-    conn = sqlite3.connect(povertyDB)
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM PovertyData")
     current_count = cursor.fetchone()[0]
@@ -179,7 +177,7 @@ def fetchData():
     return data
 
 def fetchPopulationDensity():
-    conn = sqlite3.connect(pdDB)
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('SELECT name, density FROM CountyData')
     data = cursor.fetchall()
@@ -187,7 +185,7 @@ def fetchPopulationDensity():
     return data
 
 def fetchPovertyRates():
-    conn = sqlite3.connect(povertyDB)
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('SELECT name, poverty_rate FROM PovertyData')
     data = cursor.fetchall()
@@ -223,8 +221,8 @@ def plotPovertyRates():
     plt.show()
 
 def fetchCombinedData():
-    conn_pd = sqlite3.connect(pdDB)
-    conn_poverty = sqlite3.connect(povertyDB)
+    conn_pd = sqlite3.connect(DB_NAME)
+    conn_poverty = sqlite3.connect(DB_NAME)
     query_pd = 'SELECT name, density FROM CountyData'
     query_poverty = 'SELECT name, poverty_rate FROM PovertyData'
     cursor_pd = conn_pd.cursor()
