@@ -15,7 +15,7 @@ def getClimateData():
     state_code_oh = '39'
 
     county_codes_mi = []
-    with open("Michigan Counties - Sheet1.csv", 'r') as file:
+    with open("Michigan Cases - Sheet1.csv", 'r') as file:
         reader = csv.reader(file)
         next(reader)
             
@@ -23,7 +23,7 @@ def getClimateData():
             county_codes_mi.append((row[0], row[1]))
         
     county_codes_oh = []
-    with open("Ohio Counties - Sheet1.csv", 'r') as file:
+    with open("Ohio Cases - Sheet1.csv", 'r') as file:
         reader = csv.reader(file)
         next(reader)
             
