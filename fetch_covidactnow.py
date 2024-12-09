@@ -21,17 +21,35 @@ def fetch_covid_data(url):
     else:
         raise Exception(f"Error fetching data: {response.status_code}, {response.text}")
 
-def save_to_database(dataframe, db_name):
-    with sqlite3.connect(db_name) as conn:
-        conn.execute('''
-        CREATE TABLE IF NOT EXISTS covid_data (
-            county TEXT,
-            state TEXT,
-            cases INTEGER
-        )
-        ''')
-        dataframe.to_sql('covid_data', conn, if_exists='replace', index=False)
-        print("Data successfully inserted into the database.")
+def save_to_database(dataframe, db_name, batch_size=25):
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS covid_data (
+        county TEXT,
+        state TEXT,
+        cases INTEGER
+    )
+    ''')
+    cursor.execute("SELECT COUNT(*) FROM covid_data")
+    current_count = cursor.fetchone()[0]
+    start_index = current_count
+    end_index = min(start_index + batch_size, len(dataframe))
+    if start_index >= len(dataframe):
+        print("All data has already been inserted.")
+        conn.close()
+        return
+    data_batch = dataframe.iloc[start_index:end_index]
+    for _, row in data_batch.iterrows():
+        cursor.execute('''
+        INSERT INTO covid_data (county, state, cases)
+        VALUES (?, ?, ?)
+        ''', (row['county'], row['state'], row['cases']))
+
+    conn.commit()
+    conn.close()
+
+    print(f"Inserted {end_index - start_index} records into the covid_data database.")
 
 def query_database(db_name):
     """Query the SQLite database and display the data."""
