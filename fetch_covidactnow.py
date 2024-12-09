@@ -28,6 +28,7 @@ def save_to_database(dataframe, db_name, batch_size=25):
     # Create table with two columns: county and cases
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS covid_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         county TEXT,
         cases INTEGER
     )
