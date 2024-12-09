@@ -111,11 +111,105 @@ def plotCovidandDensity():
     plt.tight_layout()
     plt.show()
 
+
+def plotCovidandPoverty():
+    conn = sqlite3.connect(DB_NAME)
+    query = """
+    SELECT 
+        PovertyData.id, 
+        PovertyData.name, 
+        PovertyData.poverty_rate, 
+        Covid_data.cases
+    FROM 
+        PovertyData
+    JOIN 
+        Covid_data
+    ON 
+        PovertyData.id = Covid_data.id;
+    """
+    merged_data = pd.read_sql_query(query, conn)
+    conn.close()
+
+    plt.figure(figsize=(10, 6))
+    plt.scatter(merged_data['poverty_rate'], merged_data['cases'], alpha=0.7, edgecolors='w', linewidth=0.5)
+
+    plt.title('Comparison of Poverty Rates and COVID-19 Cases by County', fontsize=14)
+    plt.xlabel('Poverty Rate (in %)', fontsize=12)
+    plt.ylabel('COVID-19 Cases', fontsize=12)
+
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    plt.tight_layout()
+    plt.show()
+
+def plotCovidandEnvironmentalImpact():
+    conn = sqlite3.connect(DB_NAME)
+    query = """
+    SELECT 
+        ClimateData.id, 
+        ClimateData.name, 
+        ClimateData.pm25, 
+        Covid_data.cases
+    FROM 
+        ClimateData
+    JOIN 
+        Covid_data
+    ON 
+        ClimateData.id = Covid_data.id;
+    """
+    merged_data = pd.read_sql_query(query, conn)
+    conn.close()
+
+    plt.figure(figsize=(10, 6))
+    plt.scatter(merged_data['pm25'], merged_data['cases'], alpha=0.7, edgecolors='w', linewidth=0.5)
+
+    plt.title('Comparison of Environmental Impact and COVID-19 Cases by County', fontsize=14)
+    plt.xlabel('Particulate Matter under 2.5µm (in %)', fontsize=12)
+    plt.ylabel('COVID-19 Cases', fontsize=12)
+
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    plt.tight_layout()
+    plt.show()
+
+def plotDensityandEnvironmentalImpact():
+    conn = sqlite3.connect(DB_NAME)
+    query = """
+    SELECT 
+        CountyData.id, 
+        CountyData.name, 
+        ClimateData.pm25, 
+        CountyData.density
+    FROM 
+        CountyData
+    JOIN 
+        ClimateData
+    ON 
+        CountyData.id = ClimateData.id;
+    """
+    merged_data = pd.read_sql_query(query, conn)
+    conn.close()
+
+    plt.figure(figsize=(10, 6))
+    plt.scatter(merged_data['pm25'], merged_data['density'], alpha=0.7, edgecolors='w', linewidth=0.5)
+
+    plt.title('Comparison of Environmental Impact and Population Density by County', fontsize=14)
+    plt.xlabel('Particulate Matter under 2.5µm (in %)', fontsize=12)
+    plt.ylabel('Population Density', fontsize=12)
+
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    plt.tight_layout()
+    plt.show()
+
 def main():
-    # plotPopulationDensity()
-    # plotPovertyRates()
+    plotPopulationDensity()
+    plotPovertyRates()
     plotDensityVsPoverty()
     plotCovidandDensity()
+    plotCovidandPoverty()
+    plotCovidandEnvironmentalImpact()
+    plotDensityandEnvironmentalImpact()
     pass
 
 if __name__ == "__main__":
