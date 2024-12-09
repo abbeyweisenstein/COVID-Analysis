@@ -1,6 +1,7 @@
 import sqlite3
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 DB_NAME = "ClimateAndCovid.db"
 
@@ -80,10 +81,41 @@ def plotDensityVsPoverty():
     plt.tight_layout()
     plt.show()
 
+def plotCovidandDensity():
+    conn = sqlite3.connect(DB_NAME)
+    query = """
+    SELECT 
+        CountyData.id, 
+        CountyData.name, 
+        CountyData.density, 
+        Covid_data.cases
+    FROM 
+        CountyData
+    JOIN 
+        Covid_data
+    ON 
+        CountyData.id = Covid_data.id;
+    """
+    merged_data = pd.read_sql_query(query, conn)
+    conn.close()
+
+    plt.figure(figsize=(10, 6))
+    plt.scatter(merged_data['density'], merged_data['cases'], alpha=0.7, edgecolors='w', linewidth=0.5)
+
+    plt.title('Comparison of Population Density and COVID-19 Cases by County', fontsize=14)
+    plt.xlabel('Population Density (people per square mile)', fontsize=12)
+    plt.ylabel('COVID-19 Cases', fontsize=12)
+
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    plt.tight_layout()
+    plt.show()
+
 def main():
-    plotPopulationDensity()
-    plotPovertyRates()
+    # plotPopulationDensity()
+    # plotPovertyRates()
     plotDensityVsPoverty()
+    plotCovidandDensity()
     pass
 
 if __name__ == "__main__":
