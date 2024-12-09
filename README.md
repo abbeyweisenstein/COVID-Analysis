@@ -5,7 +5,7 @@ This project explores the relationship between carbon emissions, COVID-19 hospit
 
 ## Data Sources
 The project uses the following APIs to collect data:
-- **[US EPA API]([https://aqs.epa.gov/aqsweb/documents/data_api.html#site])**
+- **[US EPA API](https://aqs.epa.gov/aqsweb/documents/data_api.html#site)**
 - **[COVID ActNow API](https://covidactnow.org/data-api)**
 - **[U.S. Census API](https://www.census.gov/data/developers/data-sets/Poverty-Statistics.html)**
 
