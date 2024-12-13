@@ -98,7 +98,7 @@ def setupClimateDatabase():
     conn.close()
 
 
-def insertPopulationDataBatch(data, batch_size=25):
+def insertClimateDataBatch(data, batch_size=25):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM ClimateData")
@@ -106,22 +106,23 @@ def insertPopulationDataBatch(data, batch_size=25):
     start_index = current_count
     end_index = min(start_index + batch_size, len(data))
     for county in data[start_index:end_index]:
+        pm25_value = county[1] 
         cursor.execute('''
             INSERT INTO ClimateData (pm25)
             VALUES (?)
-        ''', county)
+        ''', (pm25_value,))
 
     conn.commit()
     conn.close()
 
-    print(f"Inserted {end_index - start_index} records into the population density database.")
+    print(f"Inserted {end_index - start_index} records into the climate database.")
     
 
 def main():
    data = getClimateData() 
    pretty = prettyData(data)
    setupClimateDatabase()
-   insertPopulationDataBatch(pretty, batch_size=25)
+   insertClimateDataBatch(pretty, batch_size=25)
 
 if __name__ == "__main__":
     main()
