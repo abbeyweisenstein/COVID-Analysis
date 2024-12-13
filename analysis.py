@@ -5,10 +5,18 @@ import pandas as pd
 
 DB_NAME = "ClimateAndCovid.db"
 
+def fetch_county_names():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, name FROM CountyNameData')
+    county_names = dict(cursor.fetchall())
+    conn.close()
+    return county_names
+
 def fetchPopulationDensity():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute('SELECT name, density FROM CountyData')
+    cursor.execute('SELECT id, density FROM CountyData')
     data = cursor.fetchall()
     conn.close()
     return data
@@ -16,16 +24,18 @@ def fetchPopulationDensity():
 def fetchPovertyRates():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute('SELECT name, poverty_rate FROM PovertyData')
+    cursor.execute('SELECT id, poverty_rate FROM PovertyData')
     data = cursor.fetchall()
     conn.close()
     return data
 
 def plotPopulationDensity():
+    county_names = fetch_county_names()
     data = fetchPopulationDensity()
     data = sorted(data, key=lambda x: x[1], reverse=True)
-    counties = [row[0] for row in data]
+    counties = [county_names[row[0]] for row in data]
     densities = [row[1] for row in data]
+    
     plt.figure(figsize=(15, 10))
     plt.bar(counties, densities, color='skyblue')
     plt.xticks(rotation=90, fontsize=8)
@@ -36,13 +46,15 @@ def plotPopulationDensity():
     plt.show()
 
 def plotPovertyRates():
+    county_names = fetch_county_names()
     data = fetchPovertyRates()
     data = sorted(data, key=lambda x: x[1], reverse=True)
-    counties = [row[0] for row in data]
+    counties = [county_names[row[0]] for row in data]
     poverty_rates = [row[1] for row in data]
-    plt.figure(figsize=(15, 10))  # Adjust figure size
+    
+    plt.figure(figsize=(15, 10))
     plt.bar(counties, poverty_rates, color='green')
-    plt.xticks(rotation=90, fontsize=8)  # Rotate labels to fit all counties
+    plt.xticks(rotation=90, fontsize=8)
     plt.title('Poverty Rates by County')
     plt.xlabel('County')
     plt.ylabel('Poverty Rate (%)')
@@ -50,24 +62,21 @@ def plotPovertyRates():
     plt.show()
 
 def fetchCombinedData():
-    conn_pd = sqlite3.connect(DB_NAME)
-    conn_poverty = sqlite3.connect(DB_NAME)
-    query_pd = 'SELECT name, density FROM CountyData'
-    query_poverty = 'SELECT name, poverty_rate FROM PovertyData'
-    cursor_pd = conn_pd.cursor()
-    cursor_poverty = conn_poverty.cursor()
-    cursor_pd.execute(query_pd)
-    population_density_data = cursor_pd.fetchall()
-    cursor_poverty.execute(query_poverty)
-    poverty_rate_data = cursor_poverty.fetchall()
-    combined_data = []
-    for pd_row in population_density_data:
-        for poverty_row in poverty_rate_data:
-            if pd_row[0] == poverty_row[0]:
-                combined_data.append((pd_row[0], pd_row[1], poverty_row[1]))
-    conn_pd.close()
-    conn_poverty.close()
-    return combined_data
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    query = '''
+    SELECT cd.id, cd.density, pd.poverty_rate
+    FROM CountyData cd
+    JOIN PovertyData pd ON cd.id = pd.id
+    '''
+    
+    cursor.execute(query)
+    combined_data = cursor.fetchall()
+    conn.close()
+    
+    county_names = fetch_county_names()
+    return [(county_names[row[0]], row[1], row[2]) for row in combined_data]
 
 def plotDensityVsPoverty():
     data = fetchCombinedData()
@@ -84,30 +93,29 @@ def plotDensityVsPoverty():
 def plotCovidandDensity():
     conn = sqlite3.connect(DB_NAME)
     query = """
-    SELECT 
-        CountyData.id, 
-        CountyData.name, 
-        CountyData.density, 
+    SELECT
+        CountyData.id,
+        CountyData.density,
         Covid_data.cases
-    FROM 
+    FROM
         CountyData
-    JOIN 
+    JOIN
         Covid_data
-    ON 
+    ON
         CountyData.id = Covid_data.id;
     """
     merged_data = pd.read_sql_query(query, conn)
     conn.close()
-
+    
+    county_names = fetch_county_names()
+    merged_data['county_name'] = merged_data['id'].map(county_names)
+    
     plt.figure(figsize=(10, 6))
     plt.scatter(merged_data['density'], merged_data['cases'], alpha=0.7, edgecolors='w', linewidth=0.5)
-
     plt.title('Comparison of Population Density and COVID-19 Cases by County', fontsize=14)
     plt.xlabel('Population Density (people per square mile)', fontsize=12)
     plt.ylabel('COVID-19 Cases', fontsize=12)
-
     plt.grid(True, linestyle='--', alpha=0.6)
-
     plt.tight_layout()
     plt.show()
 
@@ -116,8 +124,7 @@ def plotCovidandPoverty():
     conn = sqlite3.connect(DB_NAME)
     query = """
     SELECT 
-        PovertyData.id, 
-        PovertyData.name, 
+        PovertyData.id,  
         PovertyData.poverty_rate, 
         Covid_data.cases
     FROM 
@@ -147,7 +154,6 @@ def plotCovidandEnvironmentalImpact():
     query = """
     SELECT 
         ClimateData.id, 
-        ClimateData.name, 
         ClimateData.pm25, 
         Covid_data.cases
     FROM 
@@ -177,7 +183,6 @@ def plotDensityandEnvironmentalImpact():
     query = """
     SELECT 
         CountyData.id, 
-        CountyData.name, 
         ClimateData.pm25, 
         CountyData.density
     FROM 
