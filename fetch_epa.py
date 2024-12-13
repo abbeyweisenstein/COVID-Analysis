@@ -91,7 +91,6 @@ def setupClimateDatabase():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS ClimateData (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
             pm25 FLOAT
         )
     ''')
@@ -108,8 +107,8 @@ def insertPopulationDataBatch(data, batch_size=25):
     end_index = min(start_index + batch_size, len(data))
     for county in data[start_index:end_index]:
         cursor.execute('''
-            INSERT INTO ClimateData (name, pm25)
-            VALUES (?, ?)
+            INSERT INTO ClimateData (pm25)
+            VALUES (?)
         ''', county)
 
     conn.commit()

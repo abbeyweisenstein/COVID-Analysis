@@ -14,7 +14,7 @@ def fetch_covid_data(url):
        
         # Filter for Michigan and Ohio counties
         filtered_data = data[(data['state'] == 'MI') | (data['state'] == 'OH')]
-        filtered_data = filtered_data[['county', 'actuals.cases']]
+        filtered_data = filtered_data[['actuals.cases']]
         filtered_data.rename(columns={'actuals.cases': 'cases'}, inplace=True)
         return filtered_data
     
@@ -25,11 +25,10 @@ def save_to_database(dataframe, db_name, batch_size=25):
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
 
-    # Create table with two columns: county and cases
+    # Create table with only the cases column
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS covid_data (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        county TEXT,
         cases INTEGER
     )
     ''')
@@ -47,9 +46,9 @@ def save_to_database(dataframe, db_name, batch_size=25):
     data_batch = dataframe.iloc[start_index:end_index]
     for _, row in data_batch.iterrows():
         cursor.execute('''
-        INSERT INTO covid_data (county, cases)
-        VALUES (?, ?)
-        ''', (row['county'], row['cases']))
+        INSERT INTO covid_data (cases)
+        VALUES (?)
+        ''', (int(row['cases']),)) 
 
     conn.commit()
     conn.close()
@@ -59,7 +58,7 @@ def save_to_database(dataframe, db_name, batch_size=25):
 def query_database(db_name):
     """Query the SQLite database and display the data."""
     with sqlite3.connect(db_name) as conn:
-        query = "SELECT * FROM covid_data"
+        query = "SELECT id, cases FROM covid_data"
         df = pd.read_sql(query, conn)
         print("Queried Data:")
         print(df.to_string(index=False))

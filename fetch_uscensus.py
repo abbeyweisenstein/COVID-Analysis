@@ -101,6 +101,17 @@ def cleanPovertyData(census_data):
                 continue
     return cleanData
 
+def setupCountyNameDatabase():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS CountyNameData (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
 def setupPopulationDatabase():
     conn = sqlite3.connect(DB_NAME)
@@ -108,7 +119,6 @@ def setupPopulationDatabase():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS CountyData (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
             population INTEGER,
             area INTEGER,
             density FLOAT
@@ -123,7 +133,6 @@ def setupPovertyDatabase():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS PovertyData (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
             total_population INTEGER,
             poverty_population INTEGER,
             poverty_rate FLOAT
@@ -131,6 +140,21 @@ def setupPovertyDatabase():
     ''')
     conn.commit()
     conn.close()
+
+def insertCountyNameDataBatch(data, batch_size=25):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM CountyNameData")
+    current_count = cursor.fetchone()[0]
+    start_index = current_count
+    end_index = min(start_index + batch_size, len(data))
+    for county in data[start_index:end_index]:
+        cursor.execute('''
+        INSERT INTO CountyNameData (name) VALUES (?)
+        ''', (county,))
+    conn.commit()
+    conn.close()
+    print(f"Inserted {end_index - start_index} records into the county name database.")
 
 def insertPopulationDataBatch(data, batch_size=25):
     conn = sqlite3.connect(DB_NAME)
@@ -141,13 +165,11 @@ def insertPopulationDataBatch(data, batch_size=25):
     end_index = min(start_index + batch_size, len(data))
     for county in data[start_index:end_index]:
         cursor.execute('''
-            INSERT INTO CountyData (name, population, area, density)
-            VALUES (?, ?, ?, ?)
-        ''', county)
-
+        INSERT INTO CountyData (population, area, density)
+        VALUES (?, ?, ?)
+        ''', (county[1], county[2], county[3]))
     conn.commit()
     conn.close()
-
     print(f"Inserted {end_index - start_index} records into the population density database.")
 
 def insertPovertyDataInBatch(data, batch_size=25):
@@ -159,27 +181,17 @@ def insertPovertyDataInBatch(data, batch_size=25):
     end_index = min(start_index + batch_size, len(data))
     for county in data[start_index:end_index]:
         cursor.execute('''
-            INSERT INTO PovertyData (name, total_population, poverty_population, poverty_rate)
-            VALUES (?, ?, ?, ?)
-        ''', county)
-
+        INSERT INTO PovertyData (total_population, poverty_population, poverty_rate)
+        VALUES (?, ?, ?)
+        ''', (county[1], county[2], county[3]))
     conn.commit()
     conn.close()
-
     print(f"Inserted {end_index - start_index} records into the poverty database.")
-
-def fetchData():
-    conn = sqlite3.connect('PopulationDensity.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT name, population, area, density FROM CountyData')
-    data = cursor.fetchall()
-    conn.close()
-    return data
 
 def fetchPopulationDensity():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute('SELECT name, density FROM CountyData')
+    cursor.execute('SELECT density FROM CountyData')
     data = cursor.fetchall()
     conn.close()
     return data
@@ -187,7 +199,7 @@ def fetchPopulationDensity():
 def fetchPovertyRates():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute('SELECT name, poverty_rate FROM PovertyData')
+    cursor.execute('SELECT poverty_rate FROM PovertyData')
     data = cursor.fetchall()
     conn.close()
     return data
@@ -221,31 +233,26 @@ def plotPovertyRates():
     plt.show()
 
 def fetchCombinedData():
-    conn_pd = sqlite3.connect(DB_NAME)
-    conn_poverty = sqlite3.connect(DB_NAME)
-    query_pd = 'SELECT name, density FROM CountyData'
-    query_poverty = 'SELECT name, poverty_rate FROM PovertyData'
-    cursor_pd = conn_pd.cursor()
-    cursor_poverty = conn_poverty.cursor()
-    cursor_pd.execute(query_pd)
-    population_density_data = cursor_pd.fetchall()
-    cursor_poverty.execute(query_poverty)
-    poverty_rate_data = cursor_poverty.fetchall()
-    combined_data = []
-    for pd_row in population_density_data:
-        for poverty_row in poverty_rate_data:
-            if pd_row[0] == poverty_row[0]:
-                combined_data.append((pd_row[0], pd_row[1], poverty_row[1]))
-    conn_pd.close()
-    conn_poverty.close()
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    query = '''
+    SELECT cn.name, cd.density, pd.poverty_rate
+    FROM CountyNameData cn
+    JOIN CountyData cd ON cn.id = cd.id
+    JOIN PovertyData pd ON cn.id = pd.id
+    '''
+    cursor.execute(query)
+    combined_data = cursor.fetchall()
+    conn.close()
     return combined_data
 
 def plotDensityVsPoverty():
     data = fetchCombinedData()
+    counties = [row[0] for row in data]
     densities = [row[1] for row in data]
     poverty_rates = [row[2] for row in data]
     plt.figure(figsize=(10, 6))
-    plt.scatter(densities, poverty_rates, color='purple', alpha = 0.5)
+    plt.scatter(densities, poverty_rates, color='purple', alpha=0.5)
     plt.title('Population Density vs. Poverty Rate')
     plt.xlabel('Population Density (people per sq. mile)')
     plt.ylabel('Poverty Rate (%)')
@@ -253,6 +260,7 @@ def plotDensityVsPoverty():
     plt.show()
 
 def main():
+    setupCountyNameDatabase()
     setupPopulationDatabase()
     setupPovertyDatabase()
     miAreaData = readCSV('MIArea.csv')
@@ -262,11 +270,9 @@ def main():
     countyData = popDensity(popData, areaData)
     povertyData = getPovertyData()
     povertyData = cleanPovertyData(povertyData)
+    insertCountyNameDataBatch([county[0] for county in countyData], batch_size=25)
     insertPopulationDataBatch(countyData, batch_size=25)
     insertPovertyDataInBatch(povertyData, batch_size=25)
-    plotPopulationDensity()
-    plotPovertyRates()
-    plotDensityVsPoverty()
 
 if __name__ == "__main__":
     main()
