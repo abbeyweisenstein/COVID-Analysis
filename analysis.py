@@ -2,6 +2,7 @@ import sqlite3
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import json
 
 DB_NAME = "ClimateAndCovid.db"
 
@@ -207,6 +208,40 @@ def plotDensityandEnvironmentalImpact():
     plt.tight_layout()
     plt.show()
 
+def calculate():
+    """
+    Processes the database to calculate average population density and poverty rates.
+    Writes the results to a JSON file.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    query = """
+    SELECT 
+        AVG(CountyData.density) AS avg_density,
+        AVG(PovertyData.poverty_rate) AS avg_poverty_rate
+    FROM 
+        CountyData
+    JOIN 
+        PovertyData
+    ON 
+        CountyData.id = PovertyData.id;
+    """
+    cursor.execute(query)
+    result = cursor.fetchone()
+    conn.close()
+
+    data_to_write = {
+        "Average Population Density": result[0],
+        "Average Poverty Rate": result[1]
+    }
+
+    with open("processed_data.json", "w") as json_file:
+        json.dump(data_to_write, json_file, indent=4)
+
+    print("Processed data written to 'processed_data.json'")
+
+
 def main():
     plotPopulationDensity()
     plotPovertyRates()
@@ -215,6 +250,7 @@ def main():
     plotCovidandPoverty()
     plotCovidandEnvironmentalImpact()
     plotDensityandEnvironmentalImpact()
+    calculate()
     pass
 
 if __name__ == "__main__":
